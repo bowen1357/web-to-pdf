@@ -60,7 +60,7 @@
         {                                                                                                                          
  source: targetUrl.toString(),                                                                                            
           // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                      
-          format: '1440x20000',                                                                                                    
+          format: '1440xauto',                                                                                                     
           // 页面初始加载等待时间（wait_for 会确保 JS 执行完成再截图）                                                             
           delay: 3000,                                                                                                             
           // 逐屏滚动触发懒加载，完成后通过 pdfshiftReady 通知 PDFShift                                                            
