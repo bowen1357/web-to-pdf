@@ -55,25 +55,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`[PDFShift] 开始转换: ${targetUrl.toString()}`);
 
     // 调用 PDFShift API
+    // 参考文档：https://pdfshift.io/documentation
+    // v3 API 使用更简单的参数结构
     const response = await axios.post(
       'https://api.pdfshift.io/v3/convert/pdf',
       {
         source: targetUrl.toString(),
-        // 文档配置：设置更宽的视口以捕获桌面版本
-        document: {
-          width: '1920px',
-          height: 'auto',
-          margin: {
-            top: '20px',
-            right: '20px',
-            bottom: '20px',
-            left: '20px',
-          },
+        // 文档配置 - PDFShift v3 格式
+        width: '1920px',
+        height: 'auto',
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px',
         },
-        // JavaScript 配置：等待页面完全渲染
-        javascript: {
-          wait_for_timeout: 15000,
-        },
+        // 等待 JavaScript 执行
+        javascript: true,
+        // 等待时间（毫秒）
+        delay: 5000,
       },
       {
         headers: {
