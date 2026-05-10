@@ -58,31 +58,34 @@
       const response = await axios.post(                                                                                           
         'https://api.pdfshift.io/v3/convert/pdf',                                                                                  
         {                                                                                                                          
-            source: targetUrl.toString(),       
+ source: targetUrl.toString(),                                                                                            
           // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                      
           format: '1440x20000',                                                                                                    
-          // 给页面加载和 JS 滚动充足的执行时间                                                                                    
-          delay: 8000,                                                                                                             
-          // 逐步滚动全页，触发所有懒加载内容渲染                                                                                  
+          // 页面初始加载等待时间（wait_for 会确保 JS 执行完成再截图）                                                             
+          delay: 3000,                                                                                                             
+          // 逐屏滚动触发懒加载，完成后通过 pdfshiftReady 通知 PDFShift                                                            
           javascript: `                                                                                                            
+            window.pdfshiftReady = function() { return false; };                                                                   
             (async () => {                                                                                                         
-              var s = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };                                    
-              var h = function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); };          
-              var total = h();                                                                                                     
-              // 逐步滚动，每次滚动后等待内容加载                                                                                  
-              for (var y = 0; y < total; y += window.innerHeight) {                                                                
-                window.scrollTo(0, y);                                                                                             
+              try {                                                                                                                
+                var s = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };                                  
+                var h = function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); };        
+                var total = h();                                                                                                   
+                for (var y = 0; y < total && y < 150 * window.innerHeight; y += window.innerHeight) {                              
+                  window.scrollTo(0, y);                                                                                           
+                  await s(400);                                                                                                    
+                  total = Math.max(total, h());                                                                                    
+                }                                                                                                                  
+                window.scrollTo(0, total);                                                                                         
+                await s(2000);                                                                                                     
+                window.scrollTo(0, 0);                                                                                             
                 await s(500);                                                                                                      
-                total = h();                                                                                                       
-              }                                                                                                                    
-              // 最后滚到底部确保全部触发                                                                                          
-              window.scrollTo(0, total);                                                                                           
-              await s(1000);                                                                                                       
-              // 回到顶部，确保 PDF 从页面开头展示                                                                                 
-              window.scrollTo(0, 0);                                                                                               
+              } catch(e) {}                                                                                                        
+              window.pdfshiftReady = function() { return true; };                                                                  
             })();                                                                                                                  
           `,                                                                                                                       
-          lazy_load_images: true,                                                                                                 
+          wait_for: 'pdfshiftReady',                                                                                               
+          lazy_load_images: true,                                                                                       
           margin: {                                                                                                                
             top: '20px',                                                                                                           
             right: '20px',                                                                                                         
