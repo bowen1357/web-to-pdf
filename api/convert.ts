@@ -58,11 +58,11 @@
       const response = await axios.post(                                                                                           
         'https://api.pdfshift.io/v3/convert/pdf',                                                                                  
         {                                                                                                                          
-          source: targetUrl.toString(),                                                                                            
+            source: targetUrl.toString(),       
           // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                      
           format: '1440x20000',                                                                                                    
-          // 滚动前先给页面加载时间                                                                                                
-          delay: 15000,                                                                                                            
+          // 给页面加载和 JS 滚动充足的执行时间                                                                                    
+          delay: 8000,                                                                                                             
           // 逐步滚动全页，触发所有懒加载内容渲染                                                                                  
           javascript: `                                                                                                            
             (async () => {                                                                                                         
