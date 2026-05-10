@@ -56,15 +56,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 调用 PDFShift API
     // 参考文档：https://pdfshift.io/documentation
-    // v3 API 只接受特定参数，先使用最简单的配置
+    // v3 API - 最简单的配置
     const response = await axios.post(
       'https://api.pdfshift.io/v3/convert/pdf',
       {
         source: targetUrl.toString(),
-        // 沙盒配置 - 启用 JavaScript
-        sandbox: {
-          javascript: true,
-        },
+        // 启用 JavaScript - 使用字符串值
+        sandbox: 'javascript',
       },
       {
         headers: {
