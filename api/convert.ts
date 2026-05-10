@@ -58,12 +58,10 @@
       const response = await axios.post(                                                                                           
         'https://api.pdfshift.io/v3/convert/pdf',                                                                                  
         {                                                                                                                          
-         source: targetUrl.toString(),                                                                                                  
-          // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                            
-          format: '1440x20000',                                                                                                          
-          // 页面初始加载等待时间（wait_for 会确保 JS 执行完成再截图）                                                                   
+           source: targetUrl.toString(),                                                                                                  
+          landscape: true,                                                                                                               
+          format: 'A4',                                                                                                                  
           delay: 3000,                                                                                                                   
-          // 逐屏滚动触发懒加载，完成后通过 pdfshiftReady 通知 PDFShift                                                                  
           javascript: `                                                                                                                  
             window.pdfshiftReady = function() { return false; };                                                                         
             (async () => {                                                                                                               
@@ -78,7 +76,6 @@
                 }                                                                                                                        
                 window.scrollTo(0, total);                                                                                               
                 await s(2000);                                                                                                           
-                // 测量实际内容高度，回设文档高度以匹配                                                                                  
                 var actualH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight);   
                 document.documentElement.style.setProperty('height', actualH + 'px', 'important');                                       
                 document.body.style.setProperty('height', actualH + 'px', 'important');                                                  
@@ -89,12 +86,13 @@
             })();                                                                                                                        
           `,                                                                                                                             
           wait_for: 'pdfshiftReady',                                                                                                     
-          lazy_load_images: true,                                                                                          
-          margin: {                                                                                                                
-            top: '20px',                                                                                                           
-            right: '20px',                                                                                                         
-            bottom: '20px',                                                                                                        
-            left: '20px',                                                                                                          
+          lazy_load_images: true,                                                                                                        
+          remove_blank: true,                                                                                                            
+          margin: {                                                                                                                      
+            top: '20px',                                                                                                                 
+            right: '20px',                                                                                                               
+            bottom: '20px',                                                                                                              
+            left: '20px',                                                                                                        
           },                                                                                                                       
         },                                                                                                                         
         {                                                                                                                          
