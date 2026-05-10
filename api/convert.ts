@@ -58,7 +58,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await axios.post(
       'https://api.pdfshift.io/v3/convert/pdf',
       {
-         source: targetUrl.toString(), 
+        source: targetUrl.toString(),
+        // 文档配置：设置更宽的视口以捕获桌面版本
+        document: {
+          width: '1920px',
+          height: 'auto',
+          margin: {
+            top: '20px',
+            right: '20px',
+            bottom: '20px',
+            left: '20px',
+          },
+        },
+        // JavaScript 配置：等待页面完全渲染
+        javascript: {
+          wait_for_timeout: 15000,
+        },
       },
       {
         headers: {
