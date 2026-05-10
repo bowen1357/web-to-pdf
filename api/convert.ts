@@ -86,8 +86,7 @@
             })();                                                                                                                        
           `,                                                                                                                             
           wait_for: 'pdfshiftReady',                                                                                                     
-          lazy_load_images: true,                                                                                                        
-          remove_blank: true,                                                                                                            
+          lazy_load_images: true,                                                                                                                                                                                                                 
           margin: {                                                                                                                      
             top: '20px',                                                                                                                 
             right: '20px',                                                                                                               
