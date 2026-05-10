@@ -58,34 +58,38 @@
       const response = await axios.post(                                                                                           
         'https://api.pdfshift.io/v3/convert/pdf',                                                                                  
         {                                                                                                                          
- source: targetUrl.toString(),                                                                                            
-          // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                      
-          format: '1440xauto',                                                                                                     
-          // 页面初始加载等待时间（wait_for 会确保 JS 执行完成再截图）                                                             
-          delay: 3000,                                                                                                             
-          // 逐屏滚动触发懒加载，完成后通过 pdfshiftReady 通知 PDFShift                                                            
-          javascript: `                                                                                                            
-            window.pdfshiftReady = function() { return false; };                                                                   
-            (async () => {                                                                                                         
-              try {                                                                                                                
-                var s = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };                                  
-                var h = function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); };        
-                var total = h();                                                                                                   
-                for (var y = 0; y < total && y < 150 * window.innerHeight; y += window.innerHeight) {                              
-                  window.scrollTo(0, y);                                                                                           
-                  await s(400);                                                                                                    
-                  total = Math.max(total, h());                                                                                    
-                }                                                                                                                  
-                window.scrollTo(0, total);                                                                                         
-                await s(2000);                                                                                                     
-                window.scrollTo(0, 0);                                                                                             
-                await s(500);                                                                                                      
-              } catch(e) {}                                                                                                        
-              window.pdfshiftReady = function() { return true; };                                                                  
-            })();                                                                                                                  
-          `,                                                                                                                       
-          wait_for: 'pdfshiftReady',                                                                                               
-          lazy_load_images: true,                                                                                       
+         source: targetUrl.toString(),                                                                                                  
+          // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                            
+          format: '1440x20000',                                                                                                          
+          // 页面初始加载等待时间（wait_for 会确保 JS 执行完成再截图）                                                                   
+          delay: 3000,                                                                                                                   
+          // 逐屏滚动触发懒加载，完成后通过 pdfshiftReady 通知 PDFShift                                                                  
+          javascript: `                                                                                                                  
+            window.pdfshiftReady = function() { return false; };                                                                         
+            (async () => {                                                                                                               
+              try {                                                                                                                      
+                var s = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };                                        
+                var h = function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); };              
+                var total = h();                                                                                                         
+                for (var y = 0; y < total && y < 150 * window.innerHeight; y += window.innerHeight) {                                    
+                  window.scrollTo(0, y);                                                                                                 
+                  await s(400);                                                                                                          
+                  total = Math.max(total, h());                                                                                          
+                }                                                                                                                        
+                window.scrollTo(0, total);                                                                                               
+                await s(2000);                                                                                                           
+                // 测量实际内容高度，回设文档高度以匹配                                                                                  
+                var actualH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight);   
+                document.documentElement.style.setProperty('height', actualH + 'px', 'important');                                       
+                document.body.style.setProperty('height', actualH + 'px', 'important');                                                  
+                window.scrollTo(0, 0);                                                                                                   
+                await s(500);                                                                                                            
+              } catch(e) {}                                                                                                              
+              window.pdfshiftReady = function() { return true; };                                                                        
+            })();                                                                                                                        
+          `,                                                                                                                             
+          wait_for: 'pdfshiftReady',                                                                                                     
+          lazy_load_images: true,                                                                                          
           margin: {                                                                                                                
             top: '20px',                                                                                                           
             right: '20px',                                                                                                         
