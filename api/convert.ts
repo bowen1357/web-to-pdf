@@ -4,27 +4,32 @@
   /**                                                                                                                              
    * Vercel Serverless Function - PDF 转换 API                                                                                     
    * 使用 PDFShift 外部服务生成 PDF                                                                                                
-   */                                    
+   */                                                                                                                              
                                                                                                                                    
   export default async function handler(req: VercelRequest, res: VercelResponse) {                                                 
+    // 设置 CORS 头                                                                                                                
     res.setHeader('Access-Control-Allow-Origin', '*');                                                                             
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');                                                                
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');                                                                 
                                                                                                                                    
+    // 处理预检请求                                                                                                                
     if (req.method === 'OPTIONS') {                                                                                                
       return res.status(200).end();                                                                                                
     }                                                                                                                              
-                                                                                     
+                                                                                                                                   
+    // 只允许 POST 请求                                                                                                            
     if (req.method !== 'POST') {                                                                                                   
-      return res.status(405).json({ error: '只支持 POST 请求' });                    
+      return res.status(405).json({ error: '只支持 POST 请求' });                                                                  
     }                                                                                                                              
                                                                                                                                    
     const { url } = req.body;                                                                                                      
                                                                                                                                    
-    if (!url || typeof url !== 'string') {                                                                                         
-      return res.status(400).json({ error: '请提供有效的 URL' });                    
+    // 验证 URL                                                                                                                    
+    if (!url || typeof url !== 'string') {                                           
+      return res.status(400).json({ error: '请提供有效的 URL' });                                                                  
     }                                                                                                                              
                                                                                                                                    
+    // 验证 URL 格式                                                                                                               
     let targetUrl: URL;                                                                                                            
     try {                                                                                                                          
       targetUrl = new URL(url);                                                                                                    
@@ -35,10 +40,12 @@
       return res.status(400).json({ error: 'URL 格式无效，请提供完整的网址（如 https://example.com）' });                          
     }                                                                                                                              
                                                                                                                                    
-    const apiKey = process.env.PDFSHIFT_API_KEY;                                                                                   
+    // 获取 API Key                                                                                                                
+    const apiKey = process.env.PDFSHIFT_API_KEY;                                     
                                                                                                                                    
+    // 如果没有配置 API Key，返回提示                                                                                              
     if (!apiKey) {                                                                                                                 
-      return res.status(503).json({                                                  
+      return res.status(503).json({                                                                                                
         error: 'PDF 服务未配置',                                                                                                   
         message: '请在 Vercel Dashboard 中配置 PDFSHIFT_API_KEY 环境变量',                                                         
       });                                                                                                                          
@@ -47,41 +54,18 @@
     try {                                                                                                                          
       console.log(`[PDFShift] 开始转换: ${targetUrl.toString()}`);                                                                 
                                                                                                                                    
+      // 调用 PDFShift API                                                                                                         
       const response = await axios.post(                                                                                           
         'https://api.pdfshift.io/v3/convert/pdf',                                                                                  
         {                                                                                                                          
-          source: targetUrl.toString(),                                              
-          format: '1440xauto',                                                                                                     
-          delay: 3000,                                                                                                             
+          source: targetUrl.toString(),                                                                                            
+          // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                      
+          format: '1440x20000',                                                                                                    
+          // 给页面充足时间加载和渲染                                                                                              
+          delay: 8000,                                                                                                             
+          // 自动滚动触发懒加载图片                                                                                                
           lazy_load_images: true,                                                                                                  
-          javascript: `                                                                                                            
-            window.pdfshiftReady = function() { return false; };                                                                   
-            (async () => {                                                                                                         
-              var wait = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };                                 
-              var getHeight = function() {                                                                                         
-                return Math.max(                                                                                                   
-                  document.body.scrollHeight,                                                                                      
-                  document.documentElement.scrollHeight                                                                            
-                );                                                                                                                 
-              };                                                                                                                   
-              var vh = window.innerHeight;                                                                                         
-              var h = getHeight();                                                                                                 
-              for (var y = 0; y < h; y += vh) {                                                                                    
-                window.scrollTo(0, y);                                                                                             
-                await wait(300);                                                                                                   
-                h = getHeight();                                                                                                   
-              }                                                                                                                    
-              window.scrollTo(0, getHeight());                                                                                     
-              await wait(1000);                                                                                                    
-              var finalH = getHeight();                                                                                            
-              document.documentElement.style.setProperty('min-height', finalH + 'px', 'important');                                
-              document.body.style.setProperty('min-height', finalH + 'px', 'important');                                           
-              window.scrollTo(0, 0);                                                                                               
-              await wait(200);                                                                                                     
-              window.pdfshiftReady = function() { return true; };                                                                  
-            })();                                                                                                                  
-          `,                                                                                                                       
-          wait_for: 'pdfshiftReady',                                                                                               
+          // 页边距                                                                                                                
           margin: {                                                                                                                
             top: '20px',                                                                                                           
             right: '20px',                                                                                                         
@@ -90,7 +74,7 @@
           },                                                                                                                       
         },                                                                                                                         
         {                                                                                                                          
-          headers: {                                                                 
+          headers: {                                                                                                               
             'X-API-Key': apiKey,                                                                                                   
             'Content-Type': 'application/json',                                                                                    
           },                                                                                                                       
@@ -101,8 +85,9 @@
                                                                                                                                    
       console.log(`[PDFShift] 转换成功: ${response.data.length} bytes`);                                                           
                                                                                                                                    
-      res.setHeader('Content-Type', 'application/pdf');                                                                            
-      res.setHeader('Content-Disposition', `attachment; filename="${targetUrl.hostname}.pdf"`);
+      // 设置响应头并返回 PDF                                                                                                      
+      res.setHeader('Content-Type', 'application/pdf');                              
+      res.setHeader('Content-Disposition', `attachment; filename="${targetUrl.hostname}.pdf"`);                                    
       res.setHeader('Content-Length', response.data.length);                                                                       
                                                                                                                                    
       return res.status(200).send(Buffer.from(response.data));                                                                     
@@ -121,8 +106,15 @@
           });                                                                                                                      
         }                                                                                                                          
                                                                                                                                    
+        if (status === 400) {                                                                                                      
+          return res.status(500).json({                                                                                            
+            error: 'PDF 生成失败',                                                                                                 
+            details: '请求参数错误，请检查 URL 格式',                                                                              
+          });                                                                                                                      
+        }                                                                                                                          
+                                                                                                                                   
         if (data) {                                                                                                                
-          const errorText = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);
+          const errorText = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);                                        
           return res.status(500).json({                                                                                            
             error: 'PDF 生成失败',                                                                                                 
             details: errorText,                                                                                                    
@@ -131,9 +123,9 @@
       }                                                                                                                            
                                                                                                                                    
       const errorMessage = error instanceof Error ? error.message : '未知错误';                                                    
-      return res.status(500).json({                                                  
+      return res.status(500).json({                                                                                                
         error: 'PDF 生成失败',                                                                                                     
         details: errorMessage,                                                                                                     
       });                                                                                                                          
     }                                                                                                                              
-  }        
+  }   
