@@ -1,10 +1,10 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';                                                               
+  import type { VercelRequest, VercelResponse } from '@vercel/node';                                                               
   import axios from 'axios';                                                                                                       
-                                                                                     
-  /**                                    
-   * Vercel Serverless Function - PDF 转换 API
+                                                                                                                                   
+  /**                                                                                                                              
+   * Vercel Serverless Function - PDF 转换 API                                                                                     
    * 使用 PDFShift 外部服务生成 PDF                                                                                                
-   */                                                                                                                              
+   */                                    
                                                                                                                                    
   export default async function handler(req: VercelRequest, res: VercelResponse) {                                                 
     res.setHeader('Access-Control-Allow-Origin', '*');                                                                             
@@ -14,9 +14,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
     if (req.method === 'OPTIONS') {                                                                                                
       return res.status(200).end();                                                                                                
     }                                                                                                                              
-                                                                                                                                   
+                                                                                     
     if (req.method !== 'POST') {                                                                                                   
-      return res.status(405).json({ error: '只支持 POST 请求' });                                                                  
+      return res.status(405).json({ error: '只支持 POST 请求' });                    
     }                                                                                                                              
                                                                                                                                    
     const { url } = req.body;                                                                                                      
@@ -45,38 +45,43 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
     }                                                                                                                              
                                                                                                                                    
     try {                                                                                                                          
-      console.log(`[PDFShift] 开始转换: ${targetUrl.toString()}`);                   
+      console.log(`[PDFShift] 开始转换: ${targetUrl.toString()}`);                                                                 
                                                                                                                                    
       const response = await axios.post(                                                                                           
         'https://api.pdfshift.io/v3/convert/pdf',                                                                                  
         {                                                                                                                          
           source: targetUrl.toString(),                                              
           format: '1440xauto',                                                                                                     
-          delay: 10000,                                                                                                            
+          delay: 3000,                                                                                                             
           lazy_load_images: true,                                                                                                  
           javascript: `                                                                                                            
+            window.pdfshiftReady = function() { return false; };                                                                   
             (async () => {                                                                                                         
-              const wait = ms => new Promise(r => setTimeout(r, ms));                                                              
-              const getHeight = () => Math.max(                                                                                    
-                document.body.scrollHeight,                                                                                        
-                document.documentElement.scrollHeight,                                                                             
-                document.body.offsetHeight,                                                                                        
-                document.documentElement.offsetHeight                                
-              );                                                                                                                   
-              const viewportH = window.innerHeight;                                  
-              let totalHeight = getHeight();                                                                                       
-              for (let y = 0; y < totalHeight; y += viewportH) {                                                                   
+              var wait = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };                                 
+              var getHeight = function() {                                                                                         
+                return Math.max(                                                                                                   
+                  document.body.scrollHeight,                                                                                      
+                  document.documentElement.scrollHeight                                                                            
+                );                                                                                                                 
+              };                                                                                                                   
+              var vh = window.innerHeight;                                                                                         
+              var h = getHeight();                                                                                                 
+              for (var y = 0; y < h; y += vh) {                                                                                    
                 window.scrollTo(0, y);                                                                                             
-                await wait(400);                                                                                                   
-                totalHeight = getHeight();                                                                                         
+                await wait(300);                                                                                                   
+                h = getHeight();                                                                                                   
               }                                                                                                                    
-              window.scrollTo(0, totalHeight);                                                                                     
-              await wait(800);                                                                                                     
-              document.body.style.setProperty('min-height', totalHeight + 'px', 'important');                                      
+              window.scrollTo(0, getHeight());                                                                                     
+              await wait(1000);                                                                                                    
+              var finalH = getHeight();                                                                                            
+              document.documentElement.style.setProperty('min-height', finalH + 'px', 'important');                                
+              document.body.style.setProperty('min-height', finalH + 'px', 'important');                                           
               window.scrollTo(0, 0);                                                                                               
-              await wait(300);                                                                                                     
+              await wait(200);                                                                                                     
+              window.pdfshiftReady = function() { return true; };                                                                  
             })();                                                                                                                  
           `,                                                                                                                       
+          wait_for: 'pdfshiftReady',                                                                                               
           margin: {                                                                                                                
             top: '20px',                                                                                                           
             right: '20px',                                                                                                         
@@ -86,7 +91,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
         },                                                                                                                         
         {                                                                                                                          
           headers: {                                                                 
-            'X-API-Key': apiKey,         
+            'X-API-Key': apiKey,                                                                                                   
             'Content-Type': 'application/json',                                                                                    
           },                                                                                                                       
           responseType: 'arraybuffer',                                                                                             
@@ -112,23 +117,23 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
         if (status === 401) {                                                                                                      
           return res.status(500).json({                                                                                            
             error: 'PDF 生成失败',                                                                                                 
-            details: 'API Key 无效，请检查 PDFSHIFT_API_KEY 环境变量',               
+            details: 'API Key 无效，请检查 PDFSHIFT_API_KEY 环境变量',                                                             
           });                                                                                                                      
         }                                                                                                                          
                                                                                                                                    
         if (data) {                                                                                                                
-          const errorText = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);                                        
+          const errorText = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);
           return res.status(500).json({                                                                                            
             error: 'PDF 生成失败',                                                                                                 
             details: errorText,                                                                                                    
           });                                                                                                                      
         }                                                                                                                          
       }                                                                                                                            
-                                                                                     
+                                                                                                                                   
       const errorMessage = error instanceof Error ? error.message : '未知错误';                                                    
       return res.status(500).json({                                                  
         error: 'PDF 生成失败',                                                                                                     
         details: errorMessage,                                                                                                     
       });                                                                                                                          
     }                                                                                                                              
-  }          
+  }        
