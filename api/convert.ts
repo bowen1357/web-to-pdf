@@ -61,11 +61,28 @@
           source: targetUrl.toString(),                                                                                            
           // 1440px 宽 × 20000px 高（足够覆盖绝大多数长页面）                                                                      
           format: '1440x20000',                                                                                                    
-          // 给页面充足时间加载和渲染                                                                                              
-          delay: 8000,                                                                                                             
-          // 自动滚动触发懒加载图片                                                                                                
-          lazy_load_images: true,                                                                                                  
-          // 页边距                                                                                                                
+          // 滚动前先给页面加载时间                                                                                                
+          delay: 15000,                                                                                                            
+          // 逐步滚动全页，触发所有懒加载内容渲染                                                                                  
+          javascript: `                                                                                                            
+            (async () => {                                                                                                         
+              var s = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };                                    
+              var h = function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); };          
+              var total = h();                                                                                                     
+              // 逐步滚动，每次滚动后等待内容加载                                                                                  
+              for (var y = 0; y < total; y += window.innerHeight) {                                                                
+                window.scrollTo(0, y);                                                                                             
+                await s(500);                                                                                                      
+                total = h();                                                                                                       
+              }                                                                                                                    
+              // 最后滚到底部确保全部触发                                                                                          
+              window.scrollTo(0, total);                                                                                           
+              await s(1000);                                                                                                       
+              // 回到顶部，确保 PDF 从页面开头展示                                                                                 
+              window.scrollTo(0, 0);                                                                                               
+            })();                                                                                                                  
+          `,                                                                                                                       
+          lazy_load_images: true,                                                                                                 
           margin: {                                                                                                                
             top: '20px',                                                                                                           
             right: '20px',                                                                                                         
