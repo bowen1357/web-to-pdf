@@ -1,123 +1,107 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import axios from 'axios';
-
-/**
- * Vercel Serverless Function - PDF 转换 API
- * 使用 PDFShift 外部服务生成 PDF
- */
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // 设置 CORS 头
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  // 处理预检请求
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  // 只允许 POST 请求
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: '只支持 POST 请求' });
-  }
-
-  const { url } = req.body;
-
-  // 验证 URL
-  if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: '请提供有效的 URL' });
-  }
-
-  // 验证 URL 格式
-  let targetUrl: URL;
-  try {
-    targetUrl = new URL(url);
-    if (!['http:', 'https:'].includes(targetUrl.protocol)) {
-      throw new Error('只支持 HTTP 和 HTTPS 协议');
-    }
-  } catch (error) {
-    return res.status(400).json({ error: 'URL 格式无效，请提供完整的网址（如 https://example.com）' });
-  }
-
-  // 获取 API Key
-  const apiKey = process.env.PDFSHIFT_API_KEY;
-
-  // 如果没有配置 API Key，返回提示
-  if (!apiKey) {
-    return res.status(503).json({
-      error: 'PDF 服务未配置',
-      message: '请在 Vercel Dashboard 中配置 PDFSHIFT_API_KEY 环境变量',
-    });
-  }
-
-  try {
-    console.log(`[PDFShift] 开始转换: ${targetUrl.toString()}`);
-
-    // 调用 PDFShift API
-    // 参考文档：https://pdfshift.io/documentation
-    // v3 API - 最简单的配置
-    const response = await axios.post(
-      'https://api.pdfshift.io/v3/convert/pdf',
-      {
-        source: targetUrl.toString(),
-        // 启用 JavaScript - 使用字符串值
-        sandbox: 'javascript',
-      },
-      {
-        headers: {
-          'Authorization': `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
-          'Content-Type': 'application/json',
-        },
-        responseType: 'arraybuffer',
-        timeout: 60000, // 60 秒超时（PDF 生成需要时间）
-      }
-    );
-
-    console.log(`[PDFShift] 转换成功: ${response.data.length} bytes`);
-
-    // 设置响应头并返回 PDF
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${targetUrl.hostname}.pdf"`);
-    res.setHeader('Content-Length', response.data.length);
-
-    return res.status(200).send(Buffer.from(response.data));
-
-  } catch (error) {
-    console.error('[PDFShift] 转换错误:', error);
-
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      if (status === 401) {
-        return res.status(500).json({
-          error: 'PDF 生成失败',
-          details: 'API Key 无效，请检查 PDFSHIFT_API_KEY 环境变量',
-        });
-      }
-
-      if (status === 400) {
-        return res.status(500).json({
-          error: 'PDF 生成失败',
-          details: '请求参数错误，请检查 URL 格式',
-        });
-      }
-
-      // PDFShift 返回的错误信息
-      if (data) {
-        const errorText = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);
-        return res.status(500).json({
-          error: 'PDF 生成失败',
-          details: errorText,
-        });
-      }
-    }
-
-    const errorMessage = error instanceof Error ? error.message : '未知错误';
-    return res.status(500).json({
-      error: 'PDF 生成失败',
-      details: errorMessage,
-    });
-  }
-}
+                                                                                   
+  import type { VercelRequest, VercelResponse } from '@vercel/node';                                                               
+  import axios from 'axios';                                                                                                       
+                                                                                                                                   
+  export default async function handler(req: VercelRequest, res: VercelResponse) {                                                 
+    res.setHeader('Access-Control-Allow-Origin', '*');                                                                             
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');                                                                
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');                                                                 
+                                                                                                                                   
+    if (req.method === 'OPTIONS') {                                                                                                
+      return res.status(200).end();                                                                                                
+    }                                                                                                                              
+                                                                                    
+    if (req.method !== 'POST') {                                                                                                   
+      return res.status(405).json({ error: '只支持 POST 请求' });                   
+    }                                                                                                                              
+                                                                                                                                   
+    const { url } = req.body;                                                                                                      
+                                                                                                                                   
+    if (!url || typeof url !== 'string') {                                                                                         
+      return res.status(400).json({ error: '请提供有效的 URL' });                   
+    }                                                                                                                              
+                                                                                                                                   
+    let targetUrl: URL;                                                                                                            
+    try {                                                                                                                          
+      targetUrl = new URL(url);                                                                                                    
+      if (!['http:', 'https:'].includes(targetUrl.protocol)) {                                                                     
+        throw new Error('只支持 HTTP 和 HTTPS 协议');                                                                              
+      }                                                                                                                            
+    } catch (error) {                                                                                                              
+      return res.status(400).json({ error: 'URL 格式无效' });                                                                      
+    }                                                                                                                              
+                                                                                                                                   
+    const apiKey = process.env.PDFSHIFT_API_KEY;                                                                                   
+                                                                                                                                   
+    if (!apiKey) {                                                                                                                 
+      return res.status(503).json({                                                 
+        error: 'PDF 服务未配置',                                                                                                   
+        message: '请在 Vercel Dashboard 中配置 PDFSHIFT_API_KEY 环境变量',                                                         
+      });                                                                                                                          
+    }                                                                                                                              
+                                                                                                                                   
+    try {                                                                                                                          
+      console.log(`[PDFShift] 开始转换: ${targetUrl.toString()}`);                                                                 
+                                                                                                                                   
+      const response = await axios.post(                                                                                           
+        'https://api.pdfshift.io/v3/convert/pdf',                                                                                  
+        {                                                                                                                          
+          source: targetUrl.toString(),                                                                                            
+          format: '1024xauto',                                                                                                     
+          delay: 10000,                                                                                                            
+          lazy_load_images: true,                                                                                                  
+          margin: {                                                                                                                
+            top: '20px',                                                                                                           
+            right: '20px',                                                                                                         
+            bottom: '20px',                                                                                                        
+            left: '20px',                                                                                                          
+          },                                                                                                                       
+        },                                                                                                                         
+        {                                                                                                                          
+          headers: {                                                                                                               
+            'X-API-Key': apiKey,                                                                                                   
+            'Content-Type': 'application/json',                                                                                    
+          },                                                                                                                       
+          responseType: 'arraybuffer',                                                                                             
+          timeout: 60000,                                                                                                          
+        }                                                                                                                          
+      );                                                                                                                           
+                                                                                                                                   
+      console.log(`[PDFShift] 转换成功: ${response.data.length} bytes`);                                                           
+                                                                                    
+      res.setHeader('Content-Type', 'application/pdf');                                                                            
+      res.setHeader('Content-Disposition', `attachment; filename="${targetUrl.hostname}.pdf"`);
+      res.setHeader('Content-Length', response.data.length);                                                                       
+                                                                                                                                   
+      return res.status(200).send(Buffer.from(response.data));                                                                     
+                                                                                                                                   
+    } catch (error) {                                                                                                              
+      console.error('[PDFShift] 转换错误:', error);                                 
+                                                                                                                                   
+      if (axios.isAxiosError(error)) {                                                                                             
+        const status = error.response?.status;                                                                                     
+        const data = error.response?.data;                                                                                         
+                                                                                    
+        if (status === 401) {                                                                                                      
+          return res.status(500).json({                                             
+            error: 'PDF 生成失败',                                                                                                 
+            details: 'API Key 无效，请检查 PDFSHIFT_API_KEY 环境变量',                                                             
+          });                                                                                                                      
+        }                                                                                                                          
+                                                                                                                                   
+        if (data) {                                                                                                                
+          const errorText = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);
+          return res.status(500).json({                                                                                            
+            error: 'PDF 生成失败',                                                                                                 
+            details: errorText,                                                                                                    
+          });                                                                                                                      
+        }                                                                                                                          
+      }                                                                                                                            
+                                                                                                                                   
+      const errorMessage = error instanceof Error ? error.message : '未知错误';                                                    
+      return res.status(500).json({                                                                                                
+        error: 'PDF 生成失败',                                                                                                     
+        details: errorMessage,                                                                                                     
+      });                                                                                                                          
+    }                                                                                                                              
+  }         
